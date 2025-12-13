@@ -176,6 +176,11 @@ public class DiscordIntegration {
      */
     final HashMap<Long, UUID> recentMessages = new HashMap<>(150);
 
+    /**
+     * Message pattern matcher for regex-based message interception and replacement
+     */
+    private final de.erdbeerbaerlp.dcintegration.common.util.MessagePatternMatcher messagePatternMatcher = new de.erdbeerbaerlp.dcintegration.common.util.MessagePatternMatcher();
+
 
     /**
      * Instance of the Database Interface for the linking database
@@ -303,7 +308,11 @@ public class DiscordIntegration {
         }
 
         Configuration.instance().loadConfig();
-
+        
+        // Reload message pattern matcher after config load (if INSTANCE exists)
+        if (INSTANCE != null) {
+            INSTANCE.messagePatternMatcher.reloadPatterns();
+        }
 
         if (!Configuration.instance().messages.language.equals("local")) {
             final File backupFile = new File(messagesFile, ".bak");
@@ -522,6 +531,15 @@ public class DiscordIntegration {
         return serverInterface;
     }
 
+    /**
+     * Gets the message pattern matcher instance
+     *
+     * @return MessagePatternMatcher instance
+     */
+    public de.erdbeerbaerlp.dcintegration.common.util.MessagePatternMatcher getMessagePatternMatcher() {
+        return messagePatternMatcher;
+    }
+
     public DBInterface getDatabaseInterface() {
         return linkDbInterface;
     }
@@ -617,6 +635,8 @@ public class DiscordIntegration {
 
             LOGGER.info("Bot ready");
             jda.addEventListener(listener = new DiscordEventListener());
+            // Initialize message pattern matcher
+            messagePatternMatcher.reloadPatterns();
             try {
                 loadIgnoreList();
             } catch (IOException e) {

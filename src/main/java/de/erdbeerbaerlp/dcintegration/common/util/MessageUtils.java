@@ -240,4 +240,37 @@ public class MessageUtils {
         final String name = DiscordIntegration.INSTANCE.getServerInterface().getNameFromUUID(uuid);
         return name == null || name.isEmpty() ? uuid.toString() : name;
     }
+
+    /**
+     * Replaces placeholders in a template string with values from the provided map.
+     * If a placeholder is not found in the map, it logs a warning and leaves it as literal text.
+     *
+     * @param template    Template string with placeholders like %player%, %msg%, etc.
+     * @param placeholders Map of placeholder keys (without %) to replacement values
+     * @return String with placeholders replaced
+     */
+    public static String replacePlaceholders(String template, java.util.Map<String, String> placeholders) {
+        if (template == null || template.isEmpty()) {
+            return template;
+        }
+        String result = template;
+        final Pattern placeholderPattern = Pattern.compile("%([^%]+)%");
+        final java.util.Set<String> usedPlaceholders = new java.util.HashSet<>();
+        
+        final Matcher matcher = placeholderPattern.matcher(template);
+        while (matcher.find()) {
+            final String placeholderKey = matcher.group(1);
+            usedPlaceholders.add(placeholderKey);
+        }
+        
+        for (String key : usedPlaceholders) {
+            if (placeholders.containsKey(key)) {
+                result = result.replace("%" + key + "%", placeholders.get(key));
+            } else {
+                DiscordIntegration.LOGGER.warn("Unknown placeholder '%{}%' found in template, leaving as literal text", key);
+            }
+        }
+        
+        return result;
+    }
 }

@@ -24,6 +24,10 @@ public class ReloadCommand implements MCSubCommand{
             System.err.println("Config loading failed");
             e.printStackTrace();
         }
+        // Reload message pattern matcher after config reload
+        if (de.erdbeerbaerlp.dcintegration.common.DiscordIntegration.INSTANCE != null) {
+            de.erdbeerbaerlp.dcintegration.common.DiscordIntegration.INSTANCE.getMessagePatternMatcher().reloadPatterns();
+        }
         CommandRegistry.reRegisterAllCommands();
         AddonLoader.reloadAll();
         CommandRegistry.updateSlashCommands();

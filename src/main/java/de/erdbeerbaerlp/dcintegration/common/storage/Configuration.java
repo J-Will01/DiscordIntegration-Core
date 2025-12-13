@@ -4,6 +4,7 @@ import com.moandjiezana.toml.Toml;
 import com.moandjiezana.toml.TomlComment;
 import com.moandjiezana.toml.TomlIgnore;
 import com.moandjiezana.toml.TomlWriter;
+import de.erdbeerbaerlp.dcintegration.common.DiscordIntegration;
 import de.erdbeerbaerlp.dcintegration.common.util.GameType;
 import de.erdbeerbaerlp.dcintegration.common.util.TextColors;
 import de.erdbeerbaerlp.dcintegration.common.util.UpdateChecker;
@@ -98,6 +99,9 @@ public class Configuration {
 
     @TomlComment("Configure Dynmap integration here")
     public Dynmap dynmap = new Dynmap();
+
+    @TomlComment("Configure message pattern matching for regex-based message interception and replacement")
+    public MessagePatterns messagePatterns = new MessagePatterns();
 
     @TomlComment({"Configure some plugin-specific BStats settings here", "Everything can be seen here: https://bstats.org/plugin/bukkit/DiscordIntegration/9765", "", "Does not apply to fabric yet, as there is no bstats for it"})
     public BStats bstats = new BStats();
@@ -222,6 +226,10 @@ public class Configuration {
             public String colorHexCode;
             @TomlComment("Custom embed JSON, will overwrite color setting. For more info, check the documentation at https://wiki.erdbeerbaerlp.de/dcintegration:custom-embeds or ask on discord.")
             public String customJSON = "";
+            @TomlComment({"Custom title for this embed type. Leave empty to use default.", "Supports placeholders like %player%, %advName%, %advDesc%, %msg%, etc.", "Only applies when asEmbed = true. If set, message text content will be skipped (embed-only message)."})
+            public String customTitle = "";
+            @TomlComment({"Custom description for this embed type. Leave empty to use default.", "Supports placeholders like %player%, %advName%, %advDesc%, %msg%, etc.", "Only applies when asEmbed = true. If set, message text content will be skipped (embed-only message)."})
+            public String customDescription = "";
 
             EmbedEntry(boolean defaultEnabled, String defaultColor) {
                 this.asEmbed = defaultEnabled;
@@ -236,6 +244,51 @@ public class Configuration {
             public EmbedBuilder toEmbedJson(String jsonString) {
                 final DataObject json = DataObject.fromJson(jsonString);
                 return EmbedBuilder.fromData(json);
+            }
+
+            /**
+             * Applies custom title and description fields to an EmbedBuilder if they are set.
+             * Validates Discord API limits (title: 256 chars, description: 4096 chars).
+             *
+             * @param builder     EmbedBuilder to apply custom fields to
+             * @param placeholders Map of placeholder keys (without %) to replacement values
+             * @return true if custom fields were applied, false otherwise
+             */
+            public boolean applyCustomFields(EmbedBuilder builder, java.util.Map<String, String> placeholders) {
+                if (!this.asEmbed) {
+                    if ((this.customTitle != null && !this.customTitle.isEmpty()) ||
+                        (this.customDescription != null && !this.customDescription.isEmpty())) {
+                        DiscordIntegration.LOGGER.warn("Custom embed fields (customTitle/customDescription) are set but asEmbed = false. Ignoring custom fields.");
+                        return false;
+                    }
+                    return false;
+                }
+
+                boolean applied = false;
+
+                if (this.customTitle != null && !this.customTitle.isEmpty()) {
+                    String title = de.erdbeerbaerlp.dcintegration.common.util.MessageUtils.replacePlaceholders(this.customTitle, placeholders);
+                    // Discord API limit: title max 256 chars
+                    if (title.length() > 256) {
+                        DiscordIntegration.LOGGER.warn("Custom embed title exceeds 256 character limit, truncating");
+                        title = title.substring(0, 256);
+                    }
+                    builder.setTitle(title);
+                    applied = true;
+                }
+
+                if (this.customDescription != null && !this.customDescription.isEmpty()) {
+                    String description = de.erdbeerbaerlp.dcintegration.common.util.MessageUtils.replacePlaceholders(this.customDescription, placeholders);
+                    // Discord API limit: description max 4096 chars
+                    if (description.length() > 4096) {
+                        DiscordIntegration.LOGGER.warn("Custom embed description exceeds 4096 character limit, truncating");
+                        description = description.substring(0, 4096);
+                    }
+                    builder.setDescription(description);
+                    applied = true;
+                }
+
+                return applied;
             }
         }
 
@@ -278,7 +331,7 @@ public class Configuration {
         @TomlComment({"Custom channel ID for death messages", "Leave 'default' to use default channel"})
         public String deathsChannelID = "default";
 
-        @TomlComment({"Custom channel ID for advancement messages", "Leave 'default' to use default channel"})
+        @TomlComment({"Custom channel ID for advancement messages", "Leave 'default' to use default channel", "NOTE: Platform-specific code should use: getChannel(Configuration.instance().advanced.advancementChannelID)"})
         public String advancementChannelID = "default";
 
         @TomlComment({"Custom channel for for in-game messages", "Leave 'default' to use default channel"})
@@ -433,5 +486,53 @@ public class Configuration {
     public static class Bungee {
         @TomlComment({"Set this to true if the server is running as an subserver of an bungeecord network and therefore needs to be in offline mode", "Setting this will force account linking in offline mode", "Do NOT use for actual offline mode servers, as this will break the linking feature because of the UUIDs!", "", "Currently no support for floodgate running on bungee"})
         public boolean isBehindBungee = false;
+    }
+
+    public static class MessagePatterns {
+        @TomlComment({
+            "Enable/disable pattern matching system",
+            "When enabled, configured regex patterns can intercept and replace messages before sending to Discord"
+        })
+        public boolean enabled = false;
+
+        @TomlComment({
+            "List of regex patterns to match and replace messages before sending to Discord",
+            "Each pattern can suppress the original message and/or send a custom replacement",
+            "",
+            "Patterns are evaluated in order - first matching pattern wins",
+            "",
+            "Example for backups:",
+            "  pattern = \"(?i).*backup.*start.*\"",
+            "  replacement = \"🧰 World Backup Started\"",
+            "  suppressOriginal = true",
+            "  channelID = \"default\""
+        })
+        public MessagePattern[] patterns = new MessagePattern[0];
+
+        public static class MessagePattern {
+            @TomlComment("Regex pattern to match against log/console messages (case-insensitive matching)")
+            public String pattern = "";
+
+            @TomlComment("Custom message to send if pattern matches. If empty, original message is suppressed. Supports capture groups $1, $2, etc.")
+            public String replacement = "";
+
+            @TomlComment("Target channel ID for replacement message. Leave 'default' to preserve original message's intended channel (e.g., advancementChannelID). Set to specific channel ID to override.")
+            public String channelID = "default";
+
+            @TomlComment("If true, suppress the original message from being sent to Discord")
+            public boolean suppressOriginal = true;
+
+            @TomlComment("Send replacement as embed? (only used if replacement is set)")
+            public boolean asEmbed = false;
+
+            @TomlComment("Embed title (only used if asEmbed = true). Supports capture groups $1, $2, etc.")
+            public String embedTitle = "";
+
+            @TomlComment("Embed description (only used if asEmbed = true). Supports capture groups $1, $2, etc.")
+            public String embedDescription = "";
+
+            @TomlComment("Embed color hex code (only used if asEmbed = true, e.g. #FFD700)")
+            public String embedColor = "#808080";
+        }
     }
 }
