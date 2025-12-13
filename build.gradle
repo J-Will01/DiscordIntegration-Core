@@ -113,6 +113,10 @@ dependencies {
     testImplementation group: 'com.google.code.gson', name: 'gson', version: '2.10.1'
     testImplementation group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.23.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.2'
+    
+    //Mockito for e2e testing
+    testImplementation 'org.mockito:mockito-core:5.3.1'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.3.1'
 
 }
 tasks.build.dependsOn(tasks.shadowJar)
