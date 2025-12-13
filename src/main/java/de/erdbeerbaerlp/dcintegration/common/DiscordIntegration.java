@@ -152,6 +152,10 @@ public class DiscordIntegration {
      * Time in milliseconds when the server started
      */
     public static long started = -1;
+    /**
+     * Time in milliseconds when the "Server Starting..." message was sent
+     */
+    public static long startupMessageTime = -1;
 
 
     /**
