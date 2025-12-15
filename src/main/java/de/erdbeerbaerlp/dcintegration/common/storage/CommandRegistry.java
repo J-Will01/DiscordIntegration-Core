@@ -43,6 +43,7 @@ public class CommandRegistry {
             registerCommand(new CommandLinkcheck());
             registerCommand(new CommandLink());
         }
+        registerCommand(new de.erdbeerbaerlp.dcintegration.common.discordCommands.CommandConfigPreview());
         registerConfigCommands();
     }
 

@@ -21,6 +21,9 @@ import net.dv8tion.jda.api.events.GenericEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberUpdateEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
 import net.dv8tion.jda.api.hooks.EventListener;
@@ -62,6 +65,36 @@ class DiscordEventListener implements EventListener {
                     String args = ev.getOption("args") != null ? ev.getOption("args").getAsString() : "";
                     processDiscordCommand(ev, ArrayUtils.addAll(new String[]{cmd}, args.split(" ")), ev.getChannel(), ev.getUser(), dc);
                 }
+            }
+        }
+
+        // Handle button interactions (for config preview)
+        if (event instanceof ButtonInteractionEvent) {
+            ButtonInteractionEvent ev = (ButtonInteractionEvent) event;
+            String buttonId = ev.getComponentId();
+            
+            if (buttonId.startsWith("config_preview:")) {
+                handleConfigPreviewButton(ev, buttonId, dc);
+            }
+        }
+
+        // Handle string select interactions (for config preview)
+        if (event instanceof StringSelectInteractionEvent) {
+            StringSelectInteractionEvent ev = (StringSelectInteractionEvent) event;
+            String selectId = ev.getComponentId();
+            
+            if (selectId.startsWith("config_preview:")) {
+                handleConfigPreviewSelect(ev, selectId);
+            }
+        }
+
+        // Handle modal interactions (for config preview)
+        if (event instanceof ModalInteractionEvent) {
+            ModalInteractionEvent ev = (ModalInteractionEvent) event;
+            String modalId = ev.getModalId();
+            
+            if (modalId.startsWith("config_preview:")) {
+                handleConfigPreviewModal(ev, modalId);
             }
         }
 
@@ -207,5 +240,89 @@ class DiscordEventListener implements EventListener {
         if (!hasPermission) {
             replyCallbackAction.setContent(Localization.instance().commands.noPermission).setEphemeral(true).queue();
         }
+    }
+
+    /**
+     * Handles button interactions for config preview
+     */
+    private void handleConfigPreviewButton(ButtonInteractionEvent ev, String buttonId, DiscordIntegration dc) {
+        if (!dc.hasAdminRole(ev.getMember().getRoles())) {
+            ev.reply("❌ You need admin permissions to use this feature.").setEphemeral(true).queue();
+            return;
+        }
+
+        String[] parts = buttonId.split("_", 3);
+        if (parts.length < 3) return;
+
+        String action = parts[1];
+        String embedType = parts.length > 2 ? parts[2] : null;
+
+        switch (action) {
+            case "preview":
+                // Refresh preview
+                if (embedType != null) {
+                    de.erdbeerbaerlp.dcintegration.common.discordCommands.CommandConfigPreview.showEmbedPreview(
+                        null, embedType, ev
+                    );
+                }
+                break;
+            case "edit":
+                if (parts.length >= 4) {
+                    String fieldType = parts[3]; // title, desc, or color
+                    if (embedType != null && fieldType != null) {
+                        de.erdbeerbaerlp.dcintegration.common.discordCommands.CommandConfigPreview.showEditModal(
+                            ev, embedType, fieldType
+                        );
+                    }
+                }
+                break;
+            case "toggle":
+                if (embedType != null) {
+                    de.erdbeerbaerlp.dcintegration.common.discordCommands.CommandConfigPreview.toggleEmbed(embedType);
+                    ev.reply("✅ Embed mode toggled! Use the refresh button to see the updated preview.").setEphemeral(true).queue();
+                }
+                break;
+            case "back":
+                // Show main menu
+                de.erdbeerbaerlp.dcintegration.common.discordCommands.CommandConfigPreview.showMainMenu(ev);
+                break;
+        }
+    }
+
+    /**
+     * Handles string select interactions for config preview
+     */
+    private void handleConfigPreviewSelect(StringSelectInteractionEvent ev, String selectId) {
+        DiscordIntegration dc = DiscordIntegration.INSTANCE;
+        if (dc == null || !dc.hasAdminRole(ev.getMember().getRoles())) {
+            ev.reply("❌ You need admin permissions to use this feature.").setEphemeral(true).queue();
+            return;
+        }
+
+        String embedType = ev.getValues().get(0);
+        de.erdbeerbaerlp.dcintegration.common.discordCommands.CommandConfigPreview.showEmbedPreview(ev, embedType, null);
+    }
+
+    /**
+     * Handles modal interactions for config preview
+     */
+    private void handleConfigPreviewModal(ModalInteractionEvent ev, String modalId) {
+        DiscordIntegration dc = DiscordIntegration.INSTANCE;
+        if (dc == null || !dc.hasAdminRole(ev.getMember().getRoles())) {
+            ev.reply("❌ You need admin permissions to use this feature.").setEphemeral(true).queue();
+            return;
+        }
+
+        String[] parts = modalId.split("_", 4);
+        if (parts.length < 4) return;
+
+        String action = parts[1]; // "save"
+        String fieldType = parts[2]; // "title", "desc", "color"
+        String embedType = parts[3];
+
+        String value = ev.getValue("value") != null ? ev.getValue("value").getAsString() : "";
+
+        de.erdbeerbaerlp.dcintegration.common.discordCommands.CommandConfigPreview.saveField(embedType, fieldType, value);
+        ev.reply("✅ Configuration saved! Use the refresh button to see the updated preview.").setEphemeral(true).queue();
     }
 }
