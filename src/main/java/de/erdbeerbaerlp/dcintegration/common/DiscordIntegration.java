@@ -1185,7 +1185,7 @@ public class DiscordIntegration {
                             }
                     }
                 }
-                if (avatarURL != null && avatarURL.isEmpty()) {
+                if (avatarURL != null && avatarURL.isEmpty() && uUUID != null) {
                     String skinURL = getSkinURL();
                     if (skinURL != null) {
                         avatarURL = skinURL.replace("%uuid%", uUUID.toString()).replace("%uuid_dashless%", uUUID.toString().replace("-", "")).replace("%name%", pName).replace("%randomUUID%", UUID.randomUUID().toString());
