@@ -262,9 +262,9 @@ public class Configuration {
             public String colorHexCode;
             @TomlComment("Custom embed JSON, will overwrite color setting. For more info, check the documentation at https://wiki.erdbeerbaerlp.de/dcintegration:custom-embeds or ask on discord.")
             public String customJSON = "";
-            @TomlComment({"Custom title for this embed type. Leave empty to use default.", "Supports placeholders like %player%, %advName%, %advDesc%, %msg%, etc.", "Only applies when asEmbed = true. If set, message text content will be skipped (embed-only message)."})
+            @TomlComment({"Custom title for this embed type. Leave empty to use default.", "Supports placeholders like %player%, %advName%, %advDesc%, %msg%, etc.", "If template system is enabled, also supports conditionals ({if variable}...{/if}) and includes ({include templateName}).", "Only applies when asEmbed = true. If set, message text content will be skipped (embed-only message)."})
             public String customTitle = "";
-            @TomlComment({"Custom description for this embed type. Leave empty to use default.", "Supports placeholders like %player%, %advName%, %advDesc%, %msg%, etc.", "Only applies when asEmbed = true. If set, message text content will be skipped (embed-only message)."})
+            @TomlComment({"Custom description for this embed type. Leave empty to use default.", "Supports placeholders like %player%, %advName%, %advDesc%, %msg%, etc.", "If template system is enabled, also supports conditionals ({if variable}...{/if}) and includes ({include templateName}).", "Only applies when asEmbed = true. If set, message text content will be skipped (embed-only message)."})
             public String customDescription = "";
 
             EmbedEntry(boolean defaultEnabled, String defaultColor) {

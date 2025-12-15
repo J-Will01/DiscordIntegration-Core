@@ -1,0 +1,15 @@
+# Enable the template system
+# When enabled, you can use templates in embed customization and message patterns
+enabled = true
+# Registered templates that can be reused via {include templateName}
+# Example:
+# [templates.advancement]
+# content = "🏆 %player% earned %advName%"
+# 
+# Then use it with: {include advancement}
+
+    [templates.testTemplate]
+      # Template content (supports variables, conditionals, and includes)
+      content = "Test: %value%"
+      # Template description (for documentation purposes)
+      description = ""

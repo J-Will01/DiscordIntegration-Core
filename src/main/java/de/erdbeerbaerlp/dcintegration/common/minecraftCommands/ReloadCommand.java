@@ -20,6 +20,7 @@ public class ReloadCommand implements MCSubCommand{
         try {
             Configuration.instance().loadConfig();
             Localization.instance().loadConfig();
+            de.erdbeerbaerlp.dcintegration.common.storage.template.TemplateConfig.instance().loadConfig();
         } catch (IOException e) {
             System.err.println("Config loading failed");
             e.printStackTrace();
@@ -27,6 +28,7 @@ public class ReloadCommand implements MCSubCommand{
         // Reload message pattern matcher after config reload
         if (de.erdbeerbaerlp.dcintegration.common.DiscordIntegration.INSTANCE != null) {
             de.erdbeerbaerlp.dcintegration.common.DiscordIntegration.INSTANCE.getMessagePatternMatcher().reloadPatterns();
+            de.erdbeerbaerlp.dcintegration.common.storage.template.TemplateConfig.instance().reloadTemplates();
         }
         CommandRegistry.reRegisterAllCommands();
         AddonLoader.reloadAll();

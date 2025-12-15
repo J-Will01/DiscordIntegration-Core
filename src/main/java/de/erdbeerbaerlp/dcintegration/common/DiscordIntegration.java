@@ -187,6 +187,11 @@ public class DiscordIntegration {
      */
     private final de.erdbeerbaerlp.dcintegration.common.util.MessagePatternMatcher messagePatternMatcher = new de.erdbeerbaerlp.dcintegration.common.util.MessagePatternMatcher();
 
+    /**
+     * Template engine for advanced message templating with variables, conditionals, and includes
+     */
+    private final de.erdbeerbaerlp.dcintegration.common.util.template.TemplateEngine templateEngine = new de.erdbeerbaerlp.dcintegration.common.util.template.TemplateEngine();
+
 
     /**
      * Instance of the Database Interface for the linking database
@@ -314,6 +319,9 @@ public class DiscordIntegration {
         }
 
         Configuration.instance().loadConfig();
+        
+        // Load template configuration
+        de.erdbeerbaerlp.dcintegration.common.storage.template.TemplateConfig.instance().loadConfig();
         
         // Reload message pattern matcher after config load (if INSTANCE exists)
         if (INSTANCE != null) {
@@ -546,6 +554,15 @@ public class DiscordIntegration {
         return messagePatternMatcher;
     }
 
+    /**
+     * Gets the template engine instance
+     *
+     * @return TemplateEngine instance
+     */
+    public de.erdbeerbaerlp.dcintegration.common.util.template.TemplateEngine getTemplateEngine() {
+        return templateEngine;
+    }
+
     public DBInterface getDatabaseInterface() {
         return linkDbInterface;
     }
@@ -643,6 +660,8 @@ public class DiscordIntegration {
             jda.addEventListener(listener = new DiscordEventListener());
             // Initialize message pattern matcher
             messagePatternMatcher.reloadPatterns();
+            // Initialize template engine
+            de.erdbeerbaerlp.dcintegration.common.storage.template.TemplateConfig.instance().reloadTemplates();
             try {
                 loadIgnoreList();
             } catch (IOException e) {

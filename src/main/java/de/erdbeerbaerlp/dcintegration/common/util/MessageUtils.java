@@ -244,6 +244,7 @@ public class MessageUtils {
     /**
      * Replaces placeholders in a template string with values from the provided map.
      * If a placeholder is not found in the map, it logs a warning and leaves it as literal text.
+     * If template system is enabled, uses the advanced template engine.
      *
      * @param template    Template string with placeholders like %player%, %msg%, etc.
      * @param placeholders Map of placeholder keys (without %) to replacement values
@@ -253,6 +254,19 @@ public class MessageUtils {
         if (template == null || template.isEmpty()) {
             return template;
         }
+        
+        // Use advanced template engine if enabled
+        if (DiscordIntegration.INSTANCE != null && 
+            de.erdbeerbaerlp.dcintegration.common.storage.template.TemplateConfig.instance().enabled) {
+            try {
+                return DiscordIntegration.INSTANCE.getTemplateEngine().process(template, placeholders);
+            } catch (Exception e) {
+                DiscordIntegration.LOGGER.warn("Error processing template with template engine, falling back to basic replacement", e);
+                // Fall through to basic replacement
+            }
+        }
+        
+        // Basic placeholder replacement (backward compatible)
         String result = template;
         final Pattern placeholderPattern = Pattern.compile("%([^%]+)%");
         final java.util.Set<String> usedPlaceholders = new java.util.HashSet<>();
